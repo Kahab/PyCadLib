@@ -45,21 +45,71 @@ class database_handler:
             # Create db aufrufen byw create path schreiben
             return None
 
-    def create_table(self, table):
+    def create_table(self, cur, table_name, cols):
+        # Cols should be dictionary of {name: datatype, [constraints]}
+        table_creation_string = f"""CREAATE TABLE {table_name} ("""
+        for column_name, (datatype, constraints) in cols:
+            table_creation_string += f"""{column_name}"""
+            for constraint in constraints:
+                table_creation_string += f""" {constraint}"""
+            table_creation_string += f""","""
+        table_creation_string += ');'
+        
+        cur.execute(table_creation_string)
+
         return
 
-    def create_entry(self, entry):
+    def create_entry(self, entry, cur):
+        name = entry.get_name()
+        category = entry.get_catID()
+        files = entry.get_fileID()
+        tags = entry.get_tags()
+        entry_creation_string = f"""INSERT INTO Collection (CatID, FileID, Tags, Name_desc) VALUES ({category}, {files}, {tags}, {name});"""
+
+        cur.execute(entry_creation_string)
+        
         return
 
-    def return_tables(self):
+    def create_category(self, cat_name, cur):
+        cat_creation_string = f"""INSERT INTO Categories (Name) VALUES ('{cat_name}');"""
+        cur.execute(cat_creation_string)
         return
 
-    def return_table_content(self, table):
+    def create_file_entry(self, files):
+        counter = 0
+        file_entry_string = f"""INSERT INTO Files ("""
+        for file in files:
+            counter += 1
+            if not file == files[-1]:
+                file_entry_string += f'File{counter},'
+            else:
+                file_entry_string += f'File{counter})'
+
+        file_entry_string += f' VALUES ('
+
+        for file in files:
+            if not file == files[-1]:
+                file_entry_string += f'{file}, '
+            else:
+                file_entry_string += f'{file}); '
+
         return
 
-    def create_db_struct_from_file(self, struct_file):
-        conn = self.connect2db()
-        cur = conn.cursor()
+    def return_tables(self, cur):
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        print(cur.fetchall())
+        return
+
+    def return_table_content(self, cur, table):
+        cur.execute(f"SELECT * FROM {table}")
+        rows = cur.fetchall()
+        for row in rows:
+            print(row)
+        return
+
+    def create_db_struct_from_file(self, struct_file, cur):
+        #conn = self.connect2db()
+        #cur = conn.cursor()
         sqlFile = None
         with open (struct_file, 'r') as fd:
             sqlFile = fd.read()
